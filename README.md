@@ -4,6 +4,11 @@ Real-time pitch shifting, speed control, and reverb for Spotify on Mac — no qu
 
 Built with a C++ dylib injected directly into Spotify's audio pipeline, intercepting raw PCM before it hits your speakers. Pitch shifting via [Rubber Band Library](https://breakfastquay.com/rubberband/), reverb via Freeverb algorithm.
 
+## Install
+```bash
+bash <(curl -sSL https://raw.githubusercontent.com/HyunLee8/SpotPitch/main/install.sh)
+```
+
 ## Features
 
 - **Pitch shift** — up to ±12 semitones with formant preservation
@@ -16,23 +21,6 @@ Built with a C++ dylib injected directly into Spotify's audio pipeline, intercep
 
 - macOS Apple Silicon (M1/M2/M3/M4)
 - Spotify installed in `/Applications`
-
-## Installation
-```bash
-git clone https://github.com/HyunLee8/SpotPitch.git
-cd SpotPitch
-```
-
-Then double click `SpotPitch.command`. That's it.
-
-## Usage
-
-SpotPitch handles everything automatically:
-1. Closes Spotify if running
-2. Relaunches Spotify with the audio hook
-3. Opens the control panel
-
-Drag the sliders to adjust pitch, speed, and reverb in real time.
 
 ## Presets
 
@@ -54,7 +42,3 @@ No Spotify files are modified. No SpotX required. Spotify updates won't break it
 - Speed control may show a timer desync in Spotify's progress bar — audio plays correctly
 - Re-run `SpotPitch.command` if Spotify is restarted normally
 - Apple Silicon only for now — Intel and Linux support coming
-
-## Building from source
-
-See [BUILDING.md](BUILDING.md) for instructions.
