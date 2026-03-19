@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "================================"
-echo "  SpotPitch"  
+echo "  SpotPitch"
 echo "================================"
 echo ""
 
