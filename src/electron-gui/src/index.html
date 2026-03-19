@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>SpotPitch</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080808;
+  --s1:#0f0f0f;
+  --s2:#141414;
+  --s3:#1a1a1a;
+  --border:#222;
+  --border2:#2a2a2a;
+  --text:#fff;
+  --dim:#555;
+  --dim2:#333;
+  --accent:#fff;
+}
+body{
+  font-family:-apple-system,'SF Pro Display','Helvetica Neue',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  height:100vh;
+  overflow:hidden;
+  user-select:none;
+  -webkit-app-region:drag;
+}
+.no-drag{-webkit-app-region:no-drag}
+
+.app{display:flex;height:100vh}
+
+/* Sidebar */
+.sidebar{
+  width:200px;
+  min-width:200px;
+  background:var(--s1);
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  padding:0;
+}
+.sidebar-logo{
+  padding:24px 20px 16px;
+  border-bottom:1px solid var(--border);
+}
+.logo-text{font-size:13px;font-weight:700;letter-spacing:0.2em;color:#fff}
+.logo-sub{font-size:9px;letter-spacing:0.1em;color:var(--dim);margin-top:2px}
+
+.nav{flex:1;padding:12px 0;overflow-y:auto;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav-section{margin-bottom:4px}
+.nav-label{font-size:8px;letter-spacing:0.2em;color:var(--dim2);padding:8px 20px 4px;text-transform:uppercase}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 20px;
+  font-size:11px;letter-spacing:0.05em;
+  color:var(--dim);cursor:pointer;
+  transition:all 0.15s;
+  border-left:2px solid transparent;
+}
+.nav-item:hover{color:#aaa;background:var(--s2)}
+.nav-item.active{color:#fff;border-left-color:#fff;background:var(--s2)}
+.nav-icon{font-size:13px;width:16px;text-align:center}
+
+.sidebar-status{
+  padding:14px 20px;
+  border-top:1px solid var(--border);
+}
+.status-row{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--dim2);transition:background 0.3s}
+.dot.live{background:#fff;box-shadow:0 0 6px rgba(255,255,255,0.4)}
+.status-text{font-size:9px;letter-spacing:0.1em;color:var(--dim)}
+.status-text.live{color:#fff}
+.song-name{font-size:10px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+.song-artist{font-size:9px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;margin-top:1px}
+
+/* Main */
+.main{flex:1;overflow-y:auto;scrollbar-width:none}
+.main::-webkit-scrollbar{display:none}
+
+/* Pages */
+.page{display:none;padding:28px 28px 40px;animation:fadeIn 0.2s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+.page-title{font-size:18px;font-weight:600;margin-bottom:6px}
+.page-sub{font-size:11px;color:var(--dim);margin-bottom:24px}
+
+/* Now playing bar */
+.now-playing{
+  background:var(--s2);
+  border:1px solid var(--border);
+  padding:14px 18px;
+  margin-bottom:24px;
+  position:relative;
+  overflow:hidden;
+}
+.now-playing::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);
+  animation:shimmer 3s infinite;
+}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.np-tag{font-size:8px;letter-spacing:0.2em;color:var(--dim);margin-bottom:6px}
+.np-title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.np-artist{font-size:11px;color:var(--dim)}
+
+/* Controls */
+.ctrl{margin-bottom:20px}
+.ctrl-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.ctrl-label{font-size:9px;letter-spacing:0.15em;color:var(--dim)}
+.ctrl-val{font-size:12px;font-variant-numeric:tabular-nums;color:#fff}
+
+input[type=range]{
+  -webkit-appearance:none;width:100%;height:2px;
+  background:var(--s3);outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:12px;height:12px;
+  background:#fff;border-radius:50%;cursor:pointer;
+  transition:transform 0.1s,box-shadow 0.1s;
+}
+input[type=range]:active::-webkit-slider-thumb{
+  transform:scale(1.3);
+  box-shadow:0 0 8px rgba(255,255,255,0.3);
+}
+input[type=range]::-webkit-slider-runnable-track{
+  background:linear-gradient(to right,rgba(255,255,255,0.7) var(--p,0%),var(--s3) var(--p,0%));
+  height:2px;
+}
+
+/* Section cards */
+.card{
+  background:var(--s1);
+  border:1px solid var(--border);
+  margin-bottom:10px;
+  overflow:hidden;
+  transition:border-color 0.2s;
+}
+.card.enabled{border-color:rgba(255,255,255,0.15)}
+.card-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 16px;cursor:pointer;transition:background 0.15s;
+}
+.card-header:hover{background:var(--s2)}
+.card-left{display:flex;align-items:center;gap:10px}
+.card-icon{font-size:14px;width:18px;text-align:center}
+.card-title{font-size:10px;letter-spacing:0.12em;color:var(--dim)}
+.card.enabled .card-title{color:#aaa}
+.card-right{display:flex;align-items:center;gap:8px}
+.toggle{
+  font-size:8px;letter-spacing:0.1em;
+  padding:3px 9px;border:1px solid var(--border2);
+  background:transparent;color:var(--dim);cursor:pointer;
+  transition:all 0.15s;
+}
+.toggle.on{background:#fff;color:#000;border-color:#fff}
+.toggle:hover:not(.on){border-color:#444;color:#888}
+.arrow{font-size:8px;color:var(--dim2);transition:transform 0.2s}
+.arrow.open{transform:rotate(90deg)}
+.card-body{max-height:0;overflow:hidden;transition:max-height 0.25s ease}
+.card-body.open{max-height:500px}
+.card-inner{padding:4px 16px 16px}
+
+/* Presets grid */
+.presets-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+.preset{
+  background:var(--s2);
+  border:1px solid var(--border);
+  padding:14px 10px;
+  cursor:pointer;
+  transition:all 0.15s;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+.preset::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.03),transparent);
+  opacity:0;transition:opacity 0.2s;
+}
+.preset:hover::after{opacity:1}
+.preset:hover{border-color:#333;transform:translateY(-1px)}
+.preset.active{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.2)}
+.preset-name{font-size:9px;letter-spacing:0.1em;color:#888;margin-bottom:4px}
+.preset.active .preset-name{color:#fff}
+.preset-tags{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;margin-top:5px}
+.tag{font-size:7px;letter-spacing:0.05em;padding:1px 5px;border:1px solid var(--border2);color:var(--dim)}
+.preset.active .tag{border-color:rgba(255,255,255,0.15);color:#666}
+
+/* Visualizer */
+.viz{
+  display:flex;align-items:flex-end;gap:2px;
+  height:32px;margin-bottom:16px;
+}
+.viz-bar{
+  flex:1;background:var(--s3);
+  transition:height 0.1s ease,background 0.2s;
+  min-height:2px;
+}
+
+/* Separator */
+.sep{height:1px;background:var(--border);margin:20px 0}
+
+/* Waveform canvas */
+.waveform-wrap{
+  background:var(--s1);border:1px solid var(--border);
+  padding:12px;margin-bottom:20px;position:relative;
+  overflow:hidden;
+}
+canvas#waveform{width:100%;height:40px;display:block;opacity:0.6}
+
+/* About page */
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.about-card{background:var(--s1);border:1px solid var(--border);padding:16px}
+.about-card-title{font-size:9px;letter-spacing:0.15em;color:var(--dim);margin-bottom:6px}
+.about-card-val{font-size:20px;font-weight:600;color:#fff}
+.about-card-sub{font-size:10px;color:var(--dim);margin-top:2px}
+
+/* Keyboard shortcut badge */
+.kbd{
+  font-size:8px;padding:1px 5px;border:1px solid var(--border2);
+  color:var(--dim2);font-family:monospace;
+}
+
+/* Active waveform animation */
+@keyframes pulse{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.5)}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- Sidebar -->
+<div class="sidebar no-drag">
+  <div class="sidebar-logo">
+    <div class="logo-text">SPOTPITCH</div>
+    <div class="logo-sub">AUDIO ENGINE v1.0</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">
+      <div class="nav-label">Main</div>
+      <div class="nav-item no-drag active" onclick="goTo('controls')" id="nav-controls">
+        <span class="nav-icon">◈</span> Controls
+      </div>
+      <div class="nav-item no-drag" onclick="goTo('presets')" id="nav-presets">
+        <span class="nav-icon">◧</span> Presets
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Effects</div>
+      <div class="nav-item no-drag" onclick="goTo('reverb')" id="nav-reverb">
+        <span class="nav-icon">◌</span> Reverb
+      </div>
+      <div class="nav-item no-drag" onclick="goTo('eq')" id="nav-eq">
+        <span class="nav-icon">◫</span> EQ
+      </div>
+      <div class="nav-item no-drag" onclick="goTo('fx')" id="nav-fx">
+        <span class="nav-icon">◎</span> Effects
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Info</div>
+      <div class="nav-item no-drag" onclick="goTo('about')" id="nav-about">
+        <span class="nav-icon">◉</span> About
+      </div>
+    </div>
+  </nav>
+  <div class="sidebar-status">
+    <div class="status-row">
+      <div class="dot" id="dot"></div>
+      <div class="status-text" id="slabel">OFFLINE</div>
+    </div>
+    <div class="song-name" id="sName">—</div>
+    <div class="song-artist" id="sArtist"></div>
+  </div>
+</div>
+
+<!-- Main content -->
+<div class="main">
+
+  <!-- CONTROLS PAGE -->
+  <div class="page active" id="page-controls">
+    <div class="page-title">Controls</div>
+    <div class="page-sub">Real-time pitch and tempo</div>
+
+    <div class="now-playing">
+      <div class="np-tag">NOW PLAYING</div>
+      <div class="np-title" id="npTitle">—</div>
+      <div class="np-artist" id="npArtist"></div>
+    </div>
+
+    <div class="waveform-wrap">
+      <canvas id="waveform" height="40"></canvas>
+    </div>
+
+    <div class="ctrl no-drag">
+      <div class="ctrl-header">
+        <div class="ctrl-label">PITCH</div>
+        <div class="ctrl-val" id="pitchVal">0</div>
+      </div>
+      <input type="range" id="pitchSlider" min="-12" max="12" step="0.1" value="0">
+    </div>
+
+    <div class="ctrl no-drag">
+      <div class="ctrl-header">
+        <div class="ctrl-label">SPEED</div>
+        <div class="ctrl-val" id="speedVal">1.00×</div>
+      </div>
+      <input type="range" id="speedSlider" min="0.5" max="1.0" step="0.01" value="1.0">
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- Quick effects -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:6px;margin-bottom:0" class="no-drag">
+      <div class="card" id="qreverb" style="cursor:pointer" onclick="quickToggle('reverb')">
+        <div style="padding:10px;text-align:center">
+          <div style="font-size:16px;margin-bottom:4px">◌</div>
+          <div class="card-title" style="text-align:center">REVERB</div>
+        </div>
+      </div>
+      <div class="card" id="qeq" style="cursor:pointer" onclick="quickToggle('eq')">
+        <div style="padding:10px;text-align:center">
+          <div style="font-size:16px;margin-bottom:4px">◫</div>
+          <div class="card-title" style="text-align:center">EQ</div>
+        </div>
+      </div>
+      <div class="card" id="qwide" style="cursor:pointer" onclick="quickToggle('wide')">
+        <div style="padding:10px;text-align:center">
+          <div style="font-size:16px;margin-bottom:4px">◁▷</div>
+          <div class="card-title" style="text-align:center">WIDE</div>
+        </div>
+      </div>
+      <div class="card" id="qvinyl" style="cursor:pointer" onclick="quickToggle('vinyl')">
+        <div style="padding:10px;text-align:center">
+          <div style="font-size:16px;margin-bottom:4px">◎</div>
+          <div class="card-title" style="text-align:center">VINYL</div>
+        </div>
+      </div>
+      <div class="card" id="qchorus" style="cursor:pointer" onclick="quickToggle('chorus')">
+        <div style="padding:10px;text-align:center">
+          <div style="font-size:16px;margin-bottom:4px">◈</div>
+          <div class="card-title" style="text-align:center">CHORUS</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRESETS PAGE -->
+  <div class="page" id="page-presets">
+    <div class="page-title">Presets</div>
+    <div class="page-sub">One-click sound profiles</div>
+
+    <div class="now-playing">
+      <div class="np-tag">NOW PLAYING</div>
+      <div class="np-title" id="npTitle2">—</div>
+      <div class="np-artist" id="npArtist2"></div>
+    </div>
+
+    <div class="presets-grid no-drag" id="presetsGrid"></div>
+  </div>
+
+  <!-- REVERB PAGE -->
+  <div class="page" id="page-reverb">
+    <div class="page-title">Reverb</div>
+    <div class="page-sub">Space and atmosphere</div>
+
+    <div class="card enabled" id="card-reverb">
+      <div class="card-header no-drag" onclick="toggleCard('reverb')">
+        <div class="card-left">
+          <div class="card-icon">◌</div>
+          <div class="card-title">REVERB</div>
+        </div>
+        <div class="card-right">
+          <button class="toggle" id="tog-reverb" onclick="event.stopPropagation();toggleEffect('reverb')">OFF</button>
+          <div class="arrow open" id="arr-reverb">▶</div>
+        </div>
+      </div>
+      <div class="card-body open" id="body-reverb">
+        <div class="card-inner no-drag">
+          <div class="ctrl">
+            <div class="ctrl-header"><div class="ctrl-label">ROOM SIZE</div><div class="ctrl-val" id="roomVal">0.50</div></div>
+            <input type="range" id="roomSlider" min="0" max="1" step="0.01" value="0.5">
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-header"><div class="ctrl-label">WET MIX</div><div class="ctrl-val" id="wetVal">0.30</div></div>
+            <input type="range" id="wetSlider" min="0" max="1" step="0.01" value="0.3">
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-header"><div class="ctrl-label">PRE-DELAY</div><div class="ctrl-val" id="pdVal">20ms</div></div>
+            <input type="range" id="pdSlider" min="0" max="80" step="1" value="20">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EQ PAGE -->
+  <div class="page" id="page-eq">
+    <div class="page-title">Equalizer</div>
+    <div class="page-sub">Frequency shaping</div>
+
+    <div class="viz no-drag" id="eqViz">
+      <div class="viz-bar" id="vb0"></div>
+      <div class="viz-bar" id="vb1"></div>
+      <div class="viz-bar" id="vb2"></div>
+      <div class="viz-bar" id="vb3"></div>
+      <div class="viz-bar" id="vb4"></div>
+      <div class="viz-bar" id="vb5"></div>
+      <div class="viz-bar" id="vb6"></div>
+      <div class="viz-bar" id="vb7"></div>
+    </div>
+
+    <div class="card" id="card-eq">
+      <div class="card-header no-drag" onclick="toggleCard('eq')">
+        <div class="card-left">
+          <div class="card-icon">◫</div>
+          <div class="card-title">3-BAND EQ</div>
+        </div>
+        <div class="card-right">
+          <button class="toggle" id="tog-eq" onclick="event.stopPropagation();toggleEffect('eq')">OFF</button>
+          <div class="arrow open" id="arr-eq">▶</div>
+        </div>
+      </div>
+      <div class="card-body open" id="body-eq">
+        <div class="card-inner no-drag">
+          <div class="ctrl">
+            <div class="ctrl-header"><div class="ctrl-label">BASS <span style="color:var(--dim2);font-size:8px">200Hz</span></div><div class="ctrl-val" id="bassVal">0 dB</div></div>
+            <input type="range" id="bassSlider" min="-12" max="12" step="0.5" value="0">
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-header"><div class="ctrl-label">MID <span style="color:var(--dim2);font-size:8px">1kHz</span></div><div class="ctrl-val" id="midVal">0 dB</div></div>
+            <input type="range" id="midSlider" min="-12" max="12" step="0.5" value="0">
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-header"><div class="ctrl-label">TREBLE <span style="color:var(--dim2);font-size:8px">8kHz</span></div><div class="ctrl-val" id="trebleVal">0 dB</div></div>
+            <input type="range" id="trebleSlider" min="-12" max="12" step="0.5" value="0">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FX PAGE -->
+  <div class="page" id="page-fx">
+    <div class="page-title">Effects</div>
+    <div class="page-sub">Width, texture, character</div>
+
+    <!-- Stereo Width -->
+    <div class="card" id="card-wide">
+      <div class="card-header no-drag" onclick="toggleCard('wide')">
+        <div class="card-left">
+          <div class="card-icon">◁▷</div>
+          <div class="card-title">STEREO WIDTH</div>
+        </div>
+        <div class="card-right">
+          <button class="toggle" id="tog-wide" onclick="event.stopPropagation();toggleEffect('wide')">OFF</button>
+          <div class="arrow" id="arr-wide">▶</div>
+        </div>
+      </div>
+      <div class="card-body" id="body-wide">
+        <div class="card-inner no-drag">
+          <div class="ctrl">
+            <div class="ctrl-header"><div class="ctrl-label">WIDTH</div><div class="ctrl-val" id="wideVal">0.50</div></div>
+            <input type="range" id="wideSlider" min="0" max="1" step="0.01" value="0.5">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vinyl -->
+    <div class="card" id="card-vinyl">
+      <div class="card-header no-drag" onclick="toggleCard('vinyl')">
+        <div class="card-left">
+          <div class="card-icon">◎</div>
+          <div class="card-title">VINYL SIMULATION</div>
+        </div>
+        <div class="card-right">
+          <button class="toggle" id="tog-vinyl" onclick="event.stopPropagation();toggleEffect('vinyl')">OFF</button>
+          <div class="arrow" id="arr-vinyl">▶</div>
+        </div>
+      </div>
+      <div class="card-body" id="body-vinyl">
+        <div class="card-inner no-drag">
+          <div class="ctrl">
+            <div class="ctrl-header"><div class="ctrl-label">AMOUNT</div><div class="ctrl-val" id="vinylVal">0.50</div></div>
+            <input type="range" id="vinylSlider" min="0" max="1" step="0.01" value="0.5">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chorus -->
+    <div class="card" id="card-chorus">
+      <div class="card-header no-drag" onclick="toggleCard('chorus')">
+        <div class="card-left">
+          <div class="card-icon">◈</div>
+          <div class="card-title">CHORUS / DOUBLING</div>
+        </div>
+        <div class="card-right">
+          <button class="toggle" id="tog-chorus" onclick="event.stopPropagation();toggleEffect('chorus')">OFF</button>
+          <div class="arrow" id="arr-chorus">▶</div>
+        </div>
+      </div>
+      <div class="card-body" id="body-chorus">
+        <div class="card-inner no-drag">
+          <div class="ctrl">
+            <div class="ctrl-header"><div class="ctrl-label">DEPTH</div><div class="ctrl-val" id="chorusVal">0.30</div></div>
+            <input type="range" id="chorusSlider" min="0" max="1" step="0.01" value="0.3">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ABOUT PAGE -->
+  <div class="page" id="page-about">
+    <div class="page-title">About</div>
+    <div class="page-sub">SpotPitch Audio Engine</div>
+
+    <div class="about-grid">
+      <div class="about-card">
+        <div class="about-card-title">VERSION</div>
+        <div class="about-card-val">1.0</div>
+        <div class="about-card-sub">Stable</div>
+      </div>
+      <div class="about-card">
+        <div class="about-card-title">ENGINE</div>
+        <div class="about-card-val" style="font-size:14px;margin-top:4px">Rubber Band</div>
+        <div class="about-card-sub">v4.0 Phase Vocoder</div>
+      </div>
+      <div class="about-card">
+        <div class="about-card-title">LATENCY</div>
+        <div class="about-card-val">&lt;10ms</div>
+        <div class="about-card-sub">Real-time DSP</div>
+      </div>
+      <div class="about-card">
+        <div class="about-card-title">PLATFORM</div>
+        <div class="about-card-val" style="font-size:14px;margin-top:4px">macOS</div>
+        <div class="about-card-sub">Apple Silicon</div>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <div style="font-size:10px;color:var(--dim);line-height:1.8">
+      <div style="margin-bottom:8px;color:#666;font-size:11px">DSP Chain</div>
+      Pitch Shift (RubberBand) → Speed (Playback Rate) → EQ (Biquad) → Stereo Width (M/S) → Chorus (LFO Delay) → Reverb (Freeverb + Pre-delay) → Vinyl (Wow + Crackle) → Soft Clip
+    </div>
+
+    <div class="sep"></div>
+    <div style="font-size:9px;color:var(--dim2);letter-spacing:0.05em">
+      Injects via DYLD_INSERT_LIBRARIES · Hooks AudioDeviceCreateIOProcID · Intercepts raw PCM
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+const { ipcRenderer } = require('electron')
+const { exec } = require('child_process')
+const fs = require('fs')
+
+function send(cmd) {
+  ipcRenderer.invoke('send-command', cmd).catch(()=>{})
+}
+
+async function sendBatch(cmds) {
+  try { await ipcRenderer.invoke('send-batch', cmds) } catch(e) {}
+}
+
+function p(el, mn, mx, v) {
+  el.style.setProperty('--p', ((v-mn)/(mx-mn)*100)+'%')
+}
+
+// Navigation
+function goTo(page) {
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'))
+  document.getElementById('page-'+page).classList.add('active')
+  document.getElementById('nav-'+page).classList.add('active')
+}
+
+// Card toggle
+function toggleCard(name) {
+  const body = document.getElementById('body-'+name)
+  const arr  = document.getElementById('arr-'+name)
+  body.classList.toggle('open')
+  arr.classList.toggle('open')
+}
+
+// Effect state
+const fx = {reverb:false,eq:false,wide:false,vinyl:false,chorus:false}
+
+function toggleEffect(name) {
+  fx[name] = !fx[name]
+  const tog = document.getElementById('tog-'+name)
+  const card = document.getElementById('card-'+name)
+  const qcard = document.getElementById('q'+name)
+  if(tog) { tog.textContent=fx[name]?'ON':'OFF'; tog.className='toggle'+(fx[name]?' on':'') }
+  if(card) card.className='card'+(fx[name]?' enabled':'')
+  if(qcard) qcard.className='card'+(fx[name]?' enabled':'')
+  send(name+'_enabled:'+(fx[name]?1:0))
+}
+
+function quickToggle(name) {
+  toggleEffect(name)
+  if(fx[name]) {
+    const page = {reverb:'reverb',eq:'eq',wide:'fx',vinyl:'fx',chorus:'fx'}[name]
+    goTo(page)
+  }
+}
+
+// Waveform animation
+const wcanvas = document.getElementById('waveform')
+const wctx = wcanvas.getContext('2d')
+let wphase = 0
+let playing = false
+
+function drawWaveform() {
+  const W = wcanvas.offsetWidth, H = 40
+  wcanvas.width = W; wcanvas.height = H
+  wctx.clearRect(0,0,W,H)
+  wctx.strokeStyle = playing ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.1)'
+  wctx.lineWidth = 1.5
+  wctx.beginPath()
+  for(let x=0;x<W;x++){
+    const t = x/W
+    const amp = playing ? 12 : 4
+    const y = H/2 + Math.sin(t*12+wphase)*amp*Math.sin(t*3.7+wphase*0.3)*1.5
+    x===0 ? wctx.moveTo(x,y) : wctx.lineTo(x,y)
+  }
+  wctx.stroke()
+  wphase += playing ? 0.08 : 0.01
+  requestAnimationFrame(drawWaveform)
+}
+drawWaveform()
+
+// EQ visualizer animation
+let eqActive = false
+let eqBass=0, eqMid=0, eqTreble=0
+function animEQ(){
+  if(!eqActive){requestAnimationFrame(animEQ);return}
+  const vals = [eqBass,eqBass*0.6,eqMid*0.4,eqMid,eqMid*0.5,eqTreble*0.7,eqTreble,eqTreble*0.4]
+  for(let i=0;i<8;i++){
+    const el=document.getElementById('vb'+i)
+    if(!el)continue
+    const base=12,noise=Math.random()*4
+    const h=Math.max(2,base+vals[i]+noise)
+    el.style.height=h+'px'
+    el.style.background=fx.eq?'rgba(255,255,255,0.5)':'var(--s3)'
+  }
+  requestAnimationFrame(animEQ)
+}
+animEQ()
+
+// Status + song polling
+function checkStatus(){
+  const on=fs.existsSync('/tmp/spotpitch.sock')
+  document.getElementById('dot').className='dot'+(on?' live':'')
+  document.getElementById('slabel').className='status-text'+(on?' live':'')
+  document.getElementById('slabel').textContent=on?'LIVE':'OFFLINE'
+  playing=on
+}
+
+function pollSong(){
+  exec("osascript -e 'tell application \"Spotify\" to get name of current track' 2>/dev/null",(e,o)=>{
+    if(!e&&o.trim()){
+      const t=o.trim()
+      ;['sName','npTitle','npTitle2'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=t})
+    }
+  })
+  exec("osascript -e 'tell application \"Spotify\" to get artist of current track' 2>/dev/null",(e,o)=>{
+    if(!e&&o.trim()){
+      const t=o.trim()
+      ;['sArtist','npArtist','npArtist2'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=t})
+    }
+  })
+}
+
+// Sliders
+const pitchSlider=document.getElementById('pitchSlider')
+pitchSlider.addEventListener('input',()=>{
+  const v=parseFloat(pitchSlider.value)
+  document.getElementById('pitchVal').textContent=v===0?'0':(v>0?'+':'')+v.toFixed(1)+' st'
+  p(pitchSlider,-12,12,v)
+  send('pitch:'+Math.pow(2,v/12).toFixed(4))
+  setActivePreset(-1)
+})
+
+const speedSlider=document.getElementById('speedSlider')
+speedSlider.addEventListener('input',()=>{
+  const v=parseFloat(speedSlider.value)
+  document.getElementById('speedVal').textContent=v.toFixed(2)+'×'
+  p(speedSlider,0.5,1.0,v)
+  send('speed:'+v.toFixed(4))
+  setActivePreset(-1)
+})
+
+function makeSlider(id,valId,mn,mx,cmd,fmt){
+  const el=document.getElementById(id)
+  if(!el)return
+  el.addEventListener('input',()=>{
+    const v=parseFloat(el.value)
+    const label=fmt?fmt(v):v.toFixed(2)
+    const vel=document.getElementById(valId)
+    if(vel)vel.textContent=label
+    p(el,mn,mx,v)
+    send(cmd+':'+v.toFixed(4))
+    setActivePreset(-1)
+    if(id==='bassSlider')eqBass=v
+    if(id==='midSlider')eqMid=v
+    if(id==='trebleSlider')eqTreble=v
+  })
+}
+
+makeSlider('roomSlider','roomVal',0,1,'reverb_room',v=>v.toFixed(2))
+makeSlider('wetSlider','wetVal',0,1,'reverb_wet',v=>v.toFixed(2))
+makeSlider('pdSlider','pdVal',0,80,'reverb_predelay',v=>v.toFixed(0)+'ms')
+makeSlider('bassSlider','bassVal',-12,12,'eq_bass',v=>(v>=0?'+':'')+v.toFixed(1)+' dB')
+makeSlider('midSlider','midVal',-12,12,'eq_mid',v=>(v>=0?'+':'')+v.toFixed(1)+' dB')
+makeSlider('trebleSlider','trebleVal',-12,12,'eq_treble',v=>(v>=0?'+':'')+v.toFixed(1)+' dB')
+makeSlider('wideSlider','wideVal',0,1,'wide_amount',v=>v.toFixed(2))
+makeSlider('vinylSlider','vinylVal',0,1,'vinyl_amount',v=>v.toFixed(2))
+makeSlider('chorusSlider','chorusVal',0,1,'chorus_amount',v=>v.toFixed(2))
+
+// Presets data
+const PRESETS = [
+  {name:'NORMAL',    pitch:0,   speed:1.00,rev:false,room:0.5,wet:0.3,pd:20, eq:false,bass:0,  mid:0,   treble:0,  wide:false,wa:0.5,vinyl:false,va:0.5,chorus:false,ca:0.3,tags:['clean','default']},
+  {name:'SLOWED',    pitch:-3,  speed:0.80,rev:true, room:0.8,wet:0.5,pd:20, eq:true, bass:3,  mid:-1,  treble:-3, wide:true, wa:0.6,vinyl:false,va:0.5,chorus:false,ca:0.3,tags:['slow','dreamy']},
+  {name:'NIGHTCORE', pitch:4,   speed:1.00,rev:false,room:0.5,wet:0.2,pd:0,  eq:false,bass:0,  mid:0,   treble:0,  wide:false,wa:0.5,vinyl:false,va:0.0,chorus:false,ca:0.3,tags:['fast','high']},
+  {name:'DAYCORE',   pitch:-4,  speed:0.90,rev:true, room:0.7,wet:0.4,pd:15, eq:true, bass:4,  mid:-2,  treble:-4, wide:true, wa:0.7,vinyl:true, va:0.3,chorus:false,ca:0.3,tags:['chill','warm']},
+  {name:'LO-FI',     pitch:-2,  speed:0.85,rev:true, room:0.6,wet:0.4,pd:18, eq:true, bass:3,  mid:-2,  treble:-5, wide:false,wa:0.4,vinyl:true, va:0.6,chorus:false,ca:0.2,tags:['lofi','vinyl','warm']},
+  {name:'PHONK',     pitch:-2,  speed:0.88,rev:true, room:0.5,wet:0.3,pd:10, eq:true, bass:8,  mid:-3,  treble:-4, wide:true, wa:0.8,vinyl:false,va:0.0,chorus:false,ca:0.3,tags:['bass','dark','hard']},
+  {name:'HYPERPOP',  pitch:5,   speed:1.00,rev:true, room:0.4,wet:0.3,pd:5,  eq:true, bass:2,  mid:0,   treble:4,  wide:true, wa:0.9,vinyl:false,va:0.0,chorus:true, ca:0.5,tags:['bright','wide','pop']},
+  {name:'VAPORWAVE', pitch:-5,  speed:0.78,rev:true, room:0.9,wet:0.6,pd:30, eq:true, bass:2,  mid:-3,  treble:-6, wide:true, wa:0.8,vinyl:true, va:0.5,chorus:true, ca:0.4,tags:['retro','dreamy']},
+  {name:'AMBIENT',   pitch:-1,  speed:0.82,rev:true, room:0.95,wet:0.7,pd:40,eq:true, bass:1,  mid:-4,  treble:-5, wide:true, wa:0.9,vinyl:false,va:0.2,chorus:true, ca:0.3,tags:['space','soft']},
+  {name:'DRILL',     pitch:-1,  speed:0.92,rev:true, room:0.4,wet:0.2,pd:8,  eq:true, bass:7,  mid:-2,  treble:-2, wide:true, wa:0.6,vinyl:false,va:0.0,chorus:false,ca:0.2,tags:['bass','hard','uk']},
+  {name:'SAD',       pitch:-4,  speed:0.83,rev:true, room:0.85,wet:0.55,pd:25,eq:true,bass:2, mid:-3,  treble:-4, wide:true, wa:0.7,vinyl:false,va:0.2,chorus:true, ca:0.2,tags:['slow','emotional']},
+  {name:'SOUL',      pitch:-2,  speed:0.88,rev:true, room:0.65,wet:0.4,pd:20, eq:true, bass:4, mid:1,   treble:-2, wide:false,wa:0.5,vinyl:true, va:0.35,chorus:false,ca:0.2,tags:['warm','smooth']},
+  {name:'TRAP',      pitch:-1,  speed:0.93,rev:true, room:0.5,wet:0.35,pd:12, eq:true, bass:6, mid:-2,  treble:-1, wide:true, wa:0.65,vinyl:false,va:0.0,chorus:false,ca:0.2,tags:['bass','808']},
+  {name:'JAZZ',      pitch:0,   speed:0.95,rev:true, room:0.55,wet:0.35,pd:15, eq:true,bass:1,  mid:2,   treble:1,  wide:false,wa:0.4,vinyl:true, va:0.25,chorus:false,ca:0.1,tags:['warm','live']},
+  {name:'RAVE',      pitch:2,   speed:1.00,rev:true, room:0.45,wet:0.3,pd:5,  eq:true, bass:5,  mid:-1,  treble:3,  wide:true, wa:0.9,vinyl:false,va:0.0,chorus:true, ca:0.4,tags:['bass','bright']},
+  {name:'BEDROOM',   pitch:-3,  speed:0.87,rev:true, room:0.7,wet:0.45,pd:22, eq:true, bass:3, mid:-2,  treble:-5, wide:false,wa:0.5,vinyl:true, va:0.4,chorus:false,ca:0.2,tags:['soft','intimate']},
+  {name:'CHURCH',    pitch:0,   speed:0.90,rev:true, room:0.98,wet:0.65,pd:50,eq:false,bass:0, mid:0,   treble:0,  wide:true, wa:0.8,vinyl:false,va:0.0,chorus:false,ca:0.1,tags:['big','space']},
+  {name:'8BIT',      pitch:7,   speed:1.00,rev:false,room:0.3,wet:0.1,pd:5,  eq:true, bass:-3, mid:4,   treble:5,  wide:false,wa:0.3,vinyl:false,va:0.0,chorus:false,ca:0.1,tags:['retro','pixel']},
+]
+
+let activePreset = -1
+function setActivePreset(i){
+  activePreset=i
+  document.querySelectorAll('.preset').forEach((el,idx)=>{
+    el.classList.toggle('active', idx===i)
+  })
+}
+
+function applyPreset(i){
+  const pr=PRESETS[i]
+  setActivePreset(i)
+
+  pitchSlider.value=pr.pitch; speedSlider.value=pr.speed
+  document.getElementById('roomSlider').value=pr.room
+  document.getElementById('wetSlider').value=pr.wet
+  document.getElementById('pdSlider').value=pr.pd
+  document.getElementById('bassSlider').value=pr.bass
+  document.getElementById('midSlider').value=pr.mid
+  document.getElementById('trebleSlider').value=pr.treble
+  document.getElementById('wideSlider').value=pr.wa
+  document.getElementById('vinylSlider').value=pr.va
+  document.getElementById('chorusSlider').value=pr.ca
+  eqBass=pr.bass; eqMid=pr.mid; eqTreble=pr.treble
+
+  document.getElementById('pitchVal').textContent=pr.pitch===0?'0':(pr.pitch>0?'+':'')+pr.pitch.toFixed(1)+' st'
+  document.getElementById('speedVal').textContent=pr.speed.toFixed(2)+'×'
+  document.getElementById('roomVal').textContent=pr.room.toFixed(2)
+  document.getElementById('wetVal').textContent=pr.wet.toFixed(2)
+  document.getElementById('pdVal').textContent=pr.pd+'ms'
+  document.getElementById('bassVal').textContent=(pr.bass>=0?'+':'')+pr.bass.toFixed(1)+' dB'
+  document.getElementById('midVal').textContent=(pr.mid>=0?'+':'')+pr.mid.toFixed(1)+' dB'
+  document.getElementById('trebleVal').textContent=(pr.treble>=0?'+':'')+pr.treble.toFixed(1)+' dB'
+  document.getElementById('wideVal').textContent=pr.wa.toFixed(2)
+  document.getElementById('vinylVal').textContent=pr.va.toFixed(2)
+  document.getElementById('chorusVal').textContent=pr.ca.toFixed(2)
+
+  p(pitchSlider,-12,12,pr.pitch); p(speedSlider,0.5,1.0,pr.speed)
+  p(document.getElementById('roomSlider'),0,1,pr.room)
+  p(document.getElementById('wetSlider'),0,1,pr.wet)
+  p(document.getElementById('pdSlider'),0,80,pr.pd)
+  p(document.getElementById('bassSlider'),-12,12,pr.bass)
+  p(document.getElementById('midSlider'),-12,12,pr.mid)
+  p(document.getElementById('trebleSlider'),-12,12,pr.treble)
+  p(document.getElementById('wideSlider'),0,1,pr.wa)
+  p(document.getElementById('vinylSlider'),0,1,pr.va)
+  p(document.getElementById('chorusSlider'),0,1,pr.ca)
+
+  const effMap={reverb:pr.rev,eq:pr.eq,wide:pr.wide,vinyl:pr.vinyl,chorus:pr.chorus}
+  Object.entries(effMap).forEach(([name,on])=>{
+    if(fx[name]!==on){
+      fx[name]=on
+      const tog=document.getElementById('tog-'+name)
+      const card=document.getElementById('card-'+name)
+      const qcard=document.getElementById('q'+name)
+      if(tog){tog.textContent=on?'ON':'OFF'; tog.className='toggle'+(on?' on':'')}
+      if(card)card.className='card'+(on?' enabled':'')
+      if(qcard)qcard.className='card'+(on?' enabled':'')
+    }
+  })
+
+  sendBatch([
+    'pitch:'+Math.pow(2,pr.pitch/12).toFixed(4),
+    'speed:'+pr.speed.toFixed(4),
+    'reverb_enabled:'+(pr.rev?1:0),
+    'reverb_room:'+pr.room.toFixed(4),
+    'reverb_wet:'+pr.wet.toFixed(4),
+    'reverb_predelay:'+pr.pd.toFixed(4),
+    'eq_enabled:'+(pr.eq?1:0),
+    'eq_bass:'+pr.bass.toFixed(2),
+    'eq_mid:'+pr.mid.toFixed(2),
+    'eq_treble:'+pr.treble.toFixed(2),
+    'wide_enabled:'+(pr.wide?1:0),
+    'wide_amount:'+pr.wa.toFixed(4),
+    'vinyl_enabled:'+(pr.vinyl?1:0),
+    'vinyl_amount:'+pr.va.toFixed(4),
+    'chorus_enabled:'+(pr.chorus?1:0),
+    'chorus_amount:'+pr.ca.toFixed(4)
+  ])
+}
+
+// Build presets grid
+const grid=document.getElementById('presetsGrid')
+PRESETS.forEach((pr,i)=>{
+  const el=document.createElement('div')
+  el.className='preset no-drag'
+  el.id='preset-'+i
+  el.onclick=()=>applyPreset(i)
+  el.innerHTML=`<div class="preset-name">${pr.name}</div><div class="preset-tags">${pr.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`
+  grid.appendChild(el)
+})
+
+// Init slider tracks
+p(pitchSlider,-12,12,0); p(speedSlider,0.5,1.0,1)
+p(document.getElementById('roomSlider'),0,1,0.5)
+p(document.getElementById('wetSlider'),0,1,0.3)
+p(document.getElementById('pdSlider'),0,80,20)
+p(document.getElementById('bassSlider'),-12,12,0)
+p(document.getElementById('midSlider'),-12,12,0)
+p(document.getElementById('trebleSlider'),-12,12,0)
+p(document.getElementById('wideSlider'),0,1,0.5)
+p(document.getElementById('vinylSlider'),0,1,0.5)
+p(document.getElementById('chorusSlider'),0,1,0.3)
+
+setInterval(checkStatus,1000)
+setInterval(pollSong,1000)
+pollSong(); checkStatus()
+</script>
+</body>
+</html>
