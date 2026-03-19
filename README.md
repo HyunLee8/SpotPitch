@@ -10,55 +10,51 @@ Built with a C++ dylib injected directly into Spotify's audio pipeline, intercep
 - **Speed control** — 0.5x to 3.5x without pitch change
 - **Reverb** — adjustable room size and wet mix
 - **Presets** — Normal, Slowed, Nightcore, Daycore
-- **Real-time** — no latency, changes apply instantly
+- **Real-time** — changes apply instantly
 
 ## Requirements
 
-- macOS (Apple Silicon / arm64e)
+- macOS Apple Silicon (M1/M2/M3/M4)
 - Spotify installed in `/Applications`
+
+## Installation
+```bash
+git clone https://github.com/HyunLee8/SpotPitch.git
+cd SpotPitch
+```
+
+Then double click `SpotPitch.command`. That's it.
 
 ## Usage
 
-Double click `SpotPitch.command` — it handles everything:
+SpotPitch handles everything automatically:
 1. Closes Spotify if running
 2. Relaunches Spotify with the audio hook
 3. Opens the control panel
 
-Drag the sliders. Done.
+Drag the sliders to adjust pitch, speed, and reverb in real time.
+
+## Presets
+
+| Preset | Pitch | Speed | Reverb |
+|--------|-------|-------|--------|
+| Normal | 0 | 1.0x | Off |
+| Slowed | -3 semitones | 0.8x | On |
+| Nightcore | +4 semitones | 1.25x | Off |
+| Daycore | -4 semitones | 0.9x | On |
 
 ## How it works
 
-SpotPitch injects a dylib into Spotify at launch using `DYLD_INSERT_LIBRARIES`. The dylib hooks `AudioDeviceCreateIOProcID` via [fishhook](https://github.com/facebook/fishhook), intercepting Spotify's audio IO callback. Every audio buffer passes through Rubber Band for pitch/time stretching, then through Freeverb for reverb, before reaching your output device.
+SpotPitch injects a dylib into Spotify at launch using `DYLD_INSERT_LIBRARIES`. The dylib hooks `AudioDeviceCreateIOProcID` via [fishhook](https://github.com/facebook/fishhook), intercepting Spotify's audio IO callback. Every audio buffer passes through Rubber Band for pitch/time stretching, then Freeverb for reverb, before reaching your speakers.
 
 No Spotify files are modified. No SpotX required. Spotify updates won't break it.
 
 ## Notes
 
-- Spotify may show a timer desync when using speed control — this is cosmetic, audio plays correctly
-- Re-run `SpotPitch.command` if Spotify is updated or restarted
-- Currently Mac only (Apple Silicon). Intel and Linux support planned.
+- Speed control may show a timer desync in Spotify's progress bar — audio plays correctly
+- Re-run `SpotPitch.command` if Spotify is restarted normally
+- Apple Silicon only for now — Intel and Linux support coming
 
 ## Building from source
-```bash
-# Build Rubber Band (arm64e)
-git clone https://github.com/breakfastquay/rubberband.git
-cd rubberband
-CFLAGS="-arch arm64e" CXXFLAGS="-arch arm64e" meson setup build --buildtype=release
-cd build && ninja
 
-# Build dylib
-cd SpotPitch/src
-clang++ -dynamiclib -arch arm64e \
-    -framework AudioUnit -framework CoreAudio -framework Accelerate \
-    -I/path/to/rubberband \
-    /path/to/rubberband/build/librubberband.a \
-    fishhook.c spotpitch.cpp -o ../bin/spotpitch.dylib
-
-# Build GUI (requires GLFW built for arm64e)
-clang++ -arch arm64e -std=c++17 -DGL_SILENCE_DEPRECATION \
-    -framework OpenGL -framework Cocoa -framework IOKit \
-    -framework CoreVideo -framework Metal -framework QuartzCore \
-    -I/path/to/glfw/include \
-    /path/to/glfw/build/src/libglfw3.a \
-    [imgui files] gui.cpp -o ../bin/spotpitch-gui
-```
+See [BUILDING.md](BUILDING.md) for instructions.
