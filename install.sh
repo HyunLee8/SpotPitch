@@ -26,7 +26,10 @@ fi
 
 if [ -d "SpotPitch" ]; then
     echo "Updating..."
-    cd SpotPitch && git pull && cd ..
+    cd SpotPitch
+    git fetch origin
+    git reset --hard origin/main
+    cd ..
 else
     echo "Downloading SpotPitch..."
     git clone https://github.com/HyunLee8/SpotPitch.git
