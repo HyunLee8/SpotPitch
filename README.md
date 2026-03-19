@@ -1,4 +1,3 @@
-cat > ~/dev/SpotPitch/README.md << 'EOF'
 # SpotPitch
 
 Real-time pitch shifting, speed control, and reverb for Spotify on Mac — no quality loss, no re-encoding.
