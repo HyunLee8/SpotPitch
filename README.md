@@ -32,9 +32,9 @@ bash <(curl -sSL https://raw.githubusercontent.com/HyunLee8/SpotPitch/main/insta
 | Nightcore | +4 semitones | 1.25x | Off |
 | Daycore | -4 semitones | 0.9x | On |
 
-## How it works
+## Instructions
 
-SpotPitch injects a dylib into Spotify at launch using `DYLD_INSERT_LIBRARIES`. The dylib hooks `AudioDeviceCreateIOProcID` via [fishhook](https://github.com/facebook/fishhook), intercepting Spotify's audio IO callback. Every audio buffer passes through Rubber Band for pitch/time stretching, then Freeverb for reverb, before reaching your speakers.
+Just paste the command in bash and it should automatically launch spotify in /applications. Once spotify opens up it should taek around 5-10 seconds for the GUI panel to open. It will say disconnected at first but as soon as you play a song it will be able to tune Pitch Speed and Reverb.
 
 No Spotify files are modified. No SpotX required. Spotify updates won't break it.
 
