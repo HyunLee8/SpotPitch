@@ -40,3 +40,25 @@ No Spotify files are modified. No SpotX required. Spotify updates won't break it
 
 ## Building from source
 ```bash
+# Build Rubber Band (arm64e)
+git clone https://github.com/breakfastquay/rubberband.git
+cd rubberband
+CFLAGS="-arch arm64e" CXXFLAGS="-arch arm64e" meson setup build --buildtype=release
+cd build && ninja
+
+# Build dylib
+cd SpotPitch/src
+clang++ -dynamiclib -arch arm64e \
+    -framework AudioUnit -framework CoreAudio -framework Accelerate \
+    -I/path/to/rubberband \
+    /path/to/rubberband/build/librubberband.a \
+    fishhook.c spotpitch.cpp -o ../bin/spotpitch.dylib
+
+# Build GUI (requires GLFW built for arm64e)
+clang++ -arch arm64e -std=c++17 -DGL_SILENCE_DEPRECATION \
+    -framework OpenGL -framework Cocoa -framework IOKit \
+    -framework CoreVideo -framework Metal -framework QuartzCore \
+    -I/path/to/glfw/include \
+    /path/to/glfw/build/src/libglfw3.a \
+    [imgui files] gui.cpp -o ../bin/spotpitch-gui
+```
